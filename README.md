@@ -1,6 +1,7 @@
 # tshark2flow
 
 Simple tool for compute flow from pcap using qt library and tshark with no aim to be fast.  
+  
 Compilation: qmake;make  
   
 Usage: tshark2flow config.json data.pcap ... output will be lines with flows (each single line is one json object, representing single flow/biflow)  
