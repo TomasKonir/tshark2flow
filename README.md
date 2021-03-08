@@ -14,7 +14,7 @@ Field operations:
 * or - do OR with value val = oldval | newval
 
 Sample config:  
-```
+```json
 {  
     "queueLimit":100000, //maximum parallel flow  
     "queueInactiveInterval":30000, //inactive interval for flows in ms
