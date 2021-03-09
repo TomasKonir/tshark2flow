@@ -64,6 +64,7 @@ qint64                           queueInactiveInterval = 30000;
 qint64                           queueActiveInterval = 300000;
 qint64                           queueLastCheck = 0;
 volatile bool                    ctrl_c = false;
+bool							 stats = false;
 
 void sigHandler(int s) {
 	switch (s) {
@@ -594,14 +595,13 @@ int main(int argc, char *argv[]){
 		}
 	}
 
-
-	bool stats = false;
 	if(QFile(pcap).exists()){
 		stats = true;
 		tshark.setProcessChannelMode(QProcess::ForwardedErrorChannel);
 		tshark.setReadChannel(QProcess::StandardOutput);
 		tshark.start("tshark",QStringList() << "-o" << "tcp.desegment_tcp_streams:false" << "-M" << "100000" << "-l" << "-T" << "ek" << "-n" << "-r" << pcap << tsharkFields);
 	} else {
+		stats = false;
 		tshark.setProcessChannelMode(QProcess::SeparateChannels);
 		tshark.setReadChannel(QProcess::StandardOutput);
 		tshark.start("tshark",QStringList() << "-o" << "tcp.desegment_tcp_streams:false" << "-M" << "100000" << "-l" << "-T" << "ek" << "-n" << "-i" << pcap << tsharkFields);
