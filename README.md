@@ -18,6 +18,7 @@ Sample config:
 {  
     "queueLimit":100000, //maximum parallel flow  
     "queueInactiveInterval":30000, //inactive interval for flows in ms
+    "queueActiveInterval":30000, //active interval for flows in ms (max flow duration)
     "optimize":true, //run tshark with only specified decoders - much faster, but don't print unknown fields  
     "pretty":false, //print pretty json  
     "printUnknown":true, //print unknown fields at program end  

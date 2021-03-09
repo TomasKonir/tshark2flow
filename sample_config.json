@@ -1,6 +1,7 @@
 {
 	"queueLimit":100000,
-	"queueInactiveInterval":30000,
+	"queueInactiveInterval":5000,
+	"queueActiveInterval":15000,
 	"optimize":true,
 	"pretty":false,
 	"printUnknown":true,
