@@ -430,7 +430,7 @@ void packetProcess(const TsharkPacket &packet, const QByteArray &ident, const qi
 			}
 		}
 		if((flow->updated - flow->started) > queueActiveInterval){
-			qStdOut() << json2String(flow2json(flow),prettyJson) << ",\n";
+			qStdOut() << json2String(flow2json(flow),prettyJson) << "\n";
 			qStdOut().flush();
 			queue.remove(ident);
 		}
