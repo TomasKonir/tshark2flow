@@ -297,21 +297,11 @@ QJsonObject flow2json(TsharkFlow *flow){
 }
 
 void flushQueue(){
-	if(prettyJson){
-		qStdOut() << "[\n";
-	}
 	foreach(TsharkFlow *f,queue.values()){
-		if(prettyJson){
-			qStdOut() << json2String(flow2json(f),prettyJson) << ",\n";
-		} else {
-			qStdOut() << json2String(flow2json(f),prettyJson) << "\n";
-		}
+		qStdOut() << json2String(flow2json(f),prettyJson) << "\n";
 		delete f;
 	}
 	queue.clear();
-	if(prettyJson){
-		qStdOut() << "]\n";
-	}
 }
 
 void queueCheck(qint64 now){
@@ -320,11 +310,7 @@ void queueCheck(qint64 now){
 	foreach(QByteArray k,queue.keys()){
 		TsharkFlow *f = queue.value(k);
 		if(f->updated < now){
-			if(prettyJson){
-				qStdOut() << json2String(flow2json(f),prettyJson) << ",\n";
-			} else {
-				qStdOut() << json2String(flow2json(f),prettyJson) << "\n";
-			}
+			qStdOut() << json2String(flow2json(f),prettyJson) << "\n";
 			delete(f);
 			queue.remove(k);
 		}
