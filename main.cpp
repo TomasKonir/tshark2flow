@@ -108,8 +108,8 @@ QTextStream& qStdOut(){
 QVariantList optimizeArray(QJsonValue &a){
 	QVariantList ret;
 	if(a.isArray()){
-		foreach(QJsonValue v, a.toArray()){
-			QVariant vv = v.toVariant();
+        for(const auto &it : a.toArray()){
+            QVariant vv = it.toVariant();
 			if(!ret.contains(vv)){
 				ret << vv;
 			}
@@ -144,7 +144,7 @@ void obj2packet(QJsonObject &packet, TsharkPacket &tp, bool clean = false){
 				if(v.isArray() && v.toArray().count() == 1){
 					v = v.toArray()[0];
 				}
-				switch(v.type()){
+                switch(v.type()){
 					case QJsonValue::String :{
 							QString s = v.toString();
 							bool numberOk;
@@ -218,17 +218,17 @@ QByteArray packet2ident(const TsharkPacket &packet){
 	foreach(QString s, identFields){
 		if(packet.fields.contains(s)){
 			QVariant v = packet.fields.value(s);
-			if(v.type() == QVariant::String){
+            if(v.typeId() == QMetaType::QString){
 				ret += v.toString().toUtf8();
-			} else if(v.type() == QVariant::LongLong){
+            } else if(v.typeId() == QMetaType::LongLong){
 				qint64 d = v.toLongLong();
 				ret.append(reinterpret_cast<char*>(&d),sizeof(qint64));
-			} else if(v.type() == QVariant::List){
+            } else if(v.typeId() == QMetaType::QVariantList){
 				QVariantList lv = v.toList();
 				foreach(QVariant vv, lv){
-					if(vv.type() == QVariant::String){
+                    if(vv.typeId() == QMetaType::QString){
 						ret += vv.toString().toUtf8();
-					} else if(vv.type() == QVariant::LongLong){
+                    } else if(vv.typeId() == QMetaType::LongLong){
 						qint64 d = vv.toLongLong();
 						ret.append(reinterpret_cast<char*>(&d),sizeof(qint64));
 					} else {
@@ -238,8 +238,6 @@ QByteArray packet2ident(const TsharkPacket &packet){
 			} else {
 				qInfo() << "Invalid value for ident" << s << v;
 			}
-//        } else {
-//            qInfo() << "Missing" << s;
 		}
 	}
 	return(ret);
@@ -250,20 +248,20 @@ QJsonObject hash2json(QHash<QString,QVariant> &hash){
 	foreach(QString k, hash.keys()){
 		QVariant v = hash.value(k);
 		QString kk = transformFields.value(k,k);
-		if(v.type() == QVariant::LongLong){
+        if(v.typeId() == QMetaType::LongLong){
 			if(hexaFormat.contains(k)){
 				ret.insert(kk,"0x" + QString::number(v.toLongLong(),16));
 			} else {
 				ret.insert(kk,v.toDouble());
 			}
-		} else if(v.type() == QVariant::String){
+        } else if(v.typeId() == QMetaType::QString){
 			ret.insert(kk,v.toString());
-		} else if(v.type() == QVariant::List){
+        } else if(v.typeId() == QMetaType::QVariantList){
 			QJsonArray a;
 			foreach(QVariant vv, v.toList()){
-				if(vv.type() == QVariant::String){
+                if(vv.typeId() == QMetaType::QString){
 					a<< vv.toString();
-				} else if(vv.type() == QVariant::LongLong){
+                } else if(vv.typeId() == QMetaType::LongLong){
 					a << vv.toDouble();
 				}
 			}
@@ -358,7 +356,7 @@ void packetProcess(const TsharkPacket &packet, const QByteArray &ident, const qi
 						break;
 					}
 				case OP_ARRAY:{
-						if(v.type() == QVariant::List){
+                        if(v.typeId() == QMetaType::QVariantList){
 							fields->insert(k,v);
 						} else {
 							fields->insert(k,QVariantList() << v);
@@ -415,7 +413,7 @@ void packetProcess(const TsharkPacket &packet, const QByteArray &ident, const qi
 						if(fields->contains(k)){
 							lv = fields->value(k).toList();
 						}
-						if(v.type() == QVariant::List){
+                        if(v.typeId() == QMetaType::QVariantList){
 							foreach(QVariant vv, v.toList()){
 								if(!lv.contains(vv)){
 									lv << vv;
@@ -472,17 +470,7 @@ int main(int argc, char *argv[]){
 	printUnknown = config.value("printUnknown").toBool();
 	queueLimit = config.value("queueLimit").toInt();
 	queueInactiveInterval = config.value("queueInactiveInterval").toInt(5000);
-	queueActiveInterval = config.value("queueActiveInterval").toInt(15000);
-	if(config.contains("ident") && config.value("ident").isArray()){
-		QJsonArray sa = config.value("ident").toArray();
-		foreach(QJsonValue v, sa){
-			if(v.isString()){
-                identFields << v.toString().replace(".","_");
-			} else {
-				qInfo() << "Unknown ident type:" << v;
-			}
-		}
-	}
+	queueActiveInterval = config.value("queueActiveInterval").toInt(15000);	
 	//insert default fields
 	processedFields.insert("packets",OP_SUM);
 	processedFields.insert("flow_start",OP_FIRST);
@@ -498,7 +486,22 @@ int main(int argc, char *argv[]){
                 processedFields.insert(k.replace(".","_"),operationString.value(kv));
 			}
 		}
-	}    
+    }
+    //insert ident fields
+    if(config.contains("ident") && config.value("ident").isArray()){
+        QJsonArray sa = config.value("ident").toArray();
+        foreach(QJsonValue v, sa){
+            if(v.isString()){
+                QString f = v.toString().replace(".","_");
+                if(!processedFields.contains(f)){
+                    qInfo() << "Field:" << v << "is missing in processed fields and probably will not work";
+                }
+                identFields << f;
+            } else {
+                qInfo() << "Unknown ident type:" << v;
+            }
+        }
+    }
 	if(config.contains("transform") && config.value("transform").isObject()){
 		QJsonObject fo = config.value("transform").toObject();
 		foreach(QString k, fo.keys()){
