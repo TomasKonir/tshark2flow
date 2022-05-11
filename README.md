@@ -1,6 +1,7 @@
 # tshark2flow
 
 Simple tool for compute flow from pcap using qt library and tshark with no aim to be fast.  
+skip fields was taken from tshark using: 'tshark -G | cut -f3 | sort'
   
 Compilation: qmake;make  
   
@@ -19,100 +20,125 @@ Sample config:
     "queueLimit":100000, //maximum parallel flow  
     "queueInactiveInterval":30000, //inactive interval for flows in ms
     "queueActiveInterval":30000, //active interval for flows in ms (max flow duration)
-    "optimize":true, //run tshark with only specified decoders - much faster, but don't print unknown fields  
     "pretty":false, //print pretty json  
     "printUnknown":true, //print unknown fields at program end  
     "ident" : [ //fields used as flow identifier  
-        "eth_eth_type",  
-        "ip_ip_proto",  
-        "ip_ip_src",  
-        "ip_ip_dst",  
-        "ipv6_ipv6_next",  
-        "ipv6_ipv6_src",  
-        "ipv6_ipv6_dst",  
-        "tcp_tcp_srcport",  
-        "tcp_tcp_dstport",  
-        "udp_udp_srcport",  
-        "udp_udp_dstport"  
+        "eth.type",
+        "ip.proto",
+        "ip.src",
+        "ip.dst",
+        "ipv6.next",
+        "ipv6.src",
+        "ipv6.dst",
+        "tcp.srcport",
+        "tcp.dstport",
+        "udp.srcport",
+        "udp.dstport"
     ],  
     "fields" : { //fields used in output  
-        "ip_ip_len":"sum",  
-        "ip_ip_proto":"first",  
-        "ip_ip_src":"first",  
-        "ip_ip_dst":"first",  
-        "ipv6_ipv6_plen":"sum",  
-        "ipv6_ipv6_nxt":"first",  
-        "ipv6_ipv6_src":"first",  
-        "ipv6_ipv6_dst":"first",  
-        "icmp_icmp_type":"array",  
-        "icmp_icmp_code":"array",  
-        "tcp_tcp_srcport":"first",  
-        "tcp_tcp_dstport":"first",  
-        "tcp_tcp_flags":"or",  
-        "udp_udp_srcport":"first",  
-        "udp_udp_dstport":"first",  
-        "dns_dns_qry_name":"array",  
-        "dns_dns_resp_name":"array",  
-        "dns_dns_cname":"array",  
-        "dns_dns_a":"array",  
-        "http_http_request_uri":"array",  
-        "http_http_host":"first"  
+        "ip.len":"sum",
+        "ip.proto":"first",
+        "ip.src":"first",
+        "ip.dst":"first",
+        "ipv6.plen":"sum",
+        "ipv6.nxt":"first",
+        "ipv6.src":"first",
+        "ipv6.dst":"first",
+        "icmp.type":"array",
+        "icmp.code":"array",
+        "tcp.srcport":"first",
+        "tcp.dstport":"first",
+        "tcp.flags":"or",
+        "udp.srcport":"first",
+        "udp.dstport":"first",
+        "dns.qry.name":"array",
+        "dns.resp.name":"array",
+        "dns.cname":"array",
+        "dns.a":"array",
+        "http.request.uri":"array",
+        "http.host":"first"
     },  
     "transform":{ //change field names to ...  
-        "ip_ip_len":"bytes",  
-        "ip_ip_proto":"ip_proto",  
-        "ip_ip_src":"ip_src",  
-        "ip_ip_dst":"ip_dst",  
-        "ipv6_ipv6_plen":"bytes",  
-        "ipv6_ipv6_next":"ipv6_next",  
-        "ipv6_ipv6_src":"ipv6_src",  
-        "ipv6_ipv6_dst":"ipv6_dst",  
-        "icmp_icmp_type":"icmp_type",  
-        "icmp_icmp_code":"icmp_code",  
-        "tcp_tcp_srcport":"port_src",  
-        "tcp_tcp_dstport":"port_dst",  
-        "tcp_tcp_flags":"tcp_flags",  
-        "udp_udp_srcport":"port_src",  
-        "udp_udp_dstport":"port_dst",  
-        "dns_dns_qry_name":"dns_qry_name",  
-        "dns_dns_cname":"dns_cname",  
-        "dns_dns_resp_name":"dns_resp_name",  
-        "dns_dns_a":"dns_a",  
-        "http_http_request_uri":"http_uri",  
-        "http_http_host":"http_host"  
+        "ip.len":"bytes",
+        "ip.proto":"ip.proto",
+        "ip.src":"ip.src",
+        "ip.dst":"ip.dst",
+        "ipv6.plen":"bytes",
+        "ipv6.next":"ipv6.next",
+        "ipv6.src":"ipv6.src",
+        "ipv6.dst":"ipv6.dst",
+        "icmp.type":"icmp.type",
+        "icmp.code":"icmp.code",
+        "tcp.srcport":"port.src",
+        "tcp.dstport":"port.dst",
+        "tcp.flags":"tcp.flags",
+        "udp.srcport":"port.src",
+        "udp.dstport":"port.dst",
+        "dns.qry.name":"dns.qry.name",
+        "dns.cname":"dns.cname",
+        "dns.resp.name":"dns.resp.name",
+        "dns.a":"dns.a",
+        "http.request.uri":"http.uri",
+        "http.host":"http.host"
     },  
     "hexa":[ //fields with hexa output  
-        "eth_eth_type",  
-        "tcp_tcp_flags"  
+        "eth.type",
+        "tcp.flags"
     ],  
     "biflow" : { //biflow fields  
         "tests" : [ //check fields for biflow   
-            ["ip_ip_src","ip_ip_dst"], 
-            ["ipv6_ipv6_src","ipv6_ipv6_dst"]  
+            ["ip.src","ip.dst"],
+            ["ipv6.src","ipv6.dst"]
         ],  
         "flips" : [ //flip fields if biflow is detected  
-            ["ip_ip_src","ip_ip_dst"],  
-            ["ipv6_ipv6_src","ipv6_ipv6_dst"],  
-            ["tcp_tcp_srcport","tcp_tcp_dstport"],  
-            ["udp_udp_srcport","udp_udp_dstport"]  
+            ["ip.src","ip.dst"],
+            ["ipv6.src","ipv6.dst"],
+            ["tcp.srcport","tcp.dstport"],
+            ["udp.srcport","udp.dstport"]
         ],  
         "bi_fields" : [ //biflow dual fields  
-            "ip_ip_len","ipv6_ipv6_plen","frame_frame_len","tcp_tcp_flags"  
-        ]  
+            "ip.len","ipv6.plen","frame.len","tcp.flags"
+         ]  
     },  
     "skip" : [ //skip this fields and don't report them at end as unknown  
-        "_ws_expert" ,  
-        "cflow_cflow_count" ,  
-        "cflow_cflow_exporttime" ,  
-        "cflow_cflow_flowset_id" ,  
-        "cflow_cflow_flowset_length" ,  
-        "cflow_cflow_len" ,  
-        "cflow_cflow_od_id" ,  
-        "cflow_cflow_sequence" ,  
-        "cflow_cflow_source_id" ,  
-        "cflow_cflow_sysuptime" ,  
-        "cflow_cflow_timestamp" ,  
-        "cflow_cflow_unix_secs" ,  
+        "timestamp",
+        "29west",
+        "2dparityfec",
+        "2dparityfec.d",
+        "2dparityfec.e",
+        "2dparityfec.index",
+        "2dparityfec.lr",
+        "2dparityfec.mask",
+        "2dparityfec.na",
+        "2dparityfec.offset",
+        "2dparityfec.payload",
+        "2dparityfec.ptr",
+        "2dparityfec.snbase_ext",
+        "2dparityfec.snbase_low",
+        "2dparityfec.tsr",
+        "2dparityfec.type",
+        "2dparityfec.x",
+        "3comxns",
+        "3comxns.type",
+        "3gpp",
+        "3gpp.tmsi",
+        "5gli",
+        "6lowpan",
+        "6lowpan.6loRH.bitF",
+        "6lowpan.6loRH.bitI",
+        "6lowpan.6loRH.bitK",
+        "6lowpan.6loRH.bitO",
+        "6lowpan.6loRH.bitR",
+        "6lowpan.bad_ext_header_length",
+        "6lowpan.bad_ipv6_header_length",
+        "6lowpan.bcast.seqnum",
+        "6lowpan.bitmap",
+        "6lowpan.class",
+        "6lowpan.dscp",
+        "6lowpan.dst",
+        "6lowpan.ecn",
+        "6lowpan.flow",
+        "..."
     ]  
 }
 ```  
