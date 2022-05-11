@@ -85,8 +85,12 @@ void sigHandler(int s) {
 QJsonObject readConfig(QString path){
 	QJsonObject ret;
 	QFile in(path);
-	if(in.size() < (1024*256) && in.open(QIODevice::ReadOnly)){
-		ret = QJsonDocument::fromJson(in.readAll()).object();
+    QJsonParseError err;
+    if(in.size() < (1024*1024*16) && in.open(QIODevice::ReadOnly)){
+        ret = QJsonDocument::fromJson(in.readAll(),&err).object();
+        if(err.error != QJsonParseError::NoError){
+            qInfo() << "Config parse error:" << err.offset << err.errorString();
+        }
 	}
 	return(ret);
 }
@@ -442,23 +446,11 @@ void packetProcess(const TsharkPacket &packet, const QByteArray &ident, const qi
 }
 
 
-QString field2optimized(QString field, bool optimize){
-	if(!optimize){
-		return(field);
-	} else {
-		QStringList sl = field.split("_");
-		sl.removeFirst();
-		return(sl.join("_"));
-	}
-}
-
-
 int main(int argc, char *argv[]){
 	QJsonObject config;
 	QProcess    tshark;
 	QString     pcap;
 	quint64     packets = 0;
-	bool        optimize;
 	bool        printUnknown;
 	QStringList tsharkFields;
 
@@ -473,10 +465,10 @@ int main(int argc, char *argv[]){
 	pcap = QString::fromUtf8(argv[2]);
 	config = readConfig(argv[1]);
 	if(config.isEmpty()){
+        qInfo() << "Invalid config file";
 		return(-1);
 	}
 	prettyJson = config.value("pretty").toBool();
-	optimize   = config.value("optimize").toBool();
 	printUnknown = config.value("printUnknown").toBool();
 	queueLimit = config.value("queueLimit").toInt();
 	queueInactiveInterval = config.value("queueInactiveInterval").toInt(5000);
@@ -485,7 +477,7 @@ int main(int argc, char *argv[]){
 		QJsonArray sa = config.value("ident").toArray();
 		foreach(QJsonValue v, sa){
 			if(v.isString()){
-				identFields << field2optimized(v.toString(),optimize);
+                identFields << v.toString().replace(".","_");
 			} else {
 				qInfo() << "Unknown ident type:" << v;
 			}
@@ -498,26 +490,21 @@ int main(int argc, char *argv[]){
 	if(config.contains("fields") && config.value("fields").isObject()){
 		QJsonObject fo = config.value("fields").toObject();
 		foreach(QString k, fo.keys()){
-			QString kv = fo.value(k).toString();
-			QStringList kl = k.split("_");
-			if(optimize){
-				kl.takeFirst();
-				tsharkFields << "-e" << kl.join(".");
-			}
+            QString kv = fo.value(k).toString();
 			if(!operationString.contains(kv)){
-				qInfo() << "Invalid field value" << fo.value(kl.join("_"));
+                qInfo() << "Invalid field value" << fo.value(k);
 			} else {
-				processedFields.insert(kl.join("_"),operationString.value(kv));
+                tsharkFields << "-e" << k;
+                processedFields.insert(k.replace(".","_"),operationString.value(kv));
 			}
-
 		}
-	}
+	}    
 	if(config.contains("transform") && config.value("transform").isObject()){
 		QJsonObject fo = config.value("transform").toObject();
 		foreach(QString k, fo.keys()){
 			QString kv = fo.value(k).toString();
 			if(kv.length()){
-				transformFields.insert(field2optimized(k,optimize),kv);
+                transformFields.insert(k.replace(".","_"),kv);
 			}
 		}
 	}
@@ -525,11 +512,13 @@ int main(int argc, char *argv[]){
 		QJsonArray sa = config.value("skip").toArray();
 		foreach(QJsonValue v, sa){
 			if(v.isString()){
-				QString s = v.toString();
-				if(processedFields.contains(s)){
+                QString s = v.toString();
+                QString ss = s;
+                ss.replace(".","_");
+                if(processedFields.contains(ss) && processedFields.value(ss) != OP_SKIP){
 					qInfo() << "Warning: skip field" << s << "is already in processed fields";
 				} else {
-					processedFields.insert(s,OP_SKIP);
+                    processedFields.insert(ss,OP_SKIP);
 				}
 			} else {
 				qInfo() << "Unknown skip type:" << v;
@@ -540,7 +529,7 @@ int main(int argc, char *argv[]){
 		QJsonArray sa = config.value("hexa").toArray();
 		foreach(QJsonValue v, sa){
 			if(v.isString()){
-				hexaFormat << field2optimized(v.toString(),optimize);
+                hexaFormat << v.toString().replace(".","_");
 			} else {
 				qInfo() << "Unknown hexa type:" << v;
 			}
@@ -554,7 +543,7 @@ int main(int argc, char *argv[]){
 				QJsonArray a = v.toArray();
 				if(a.count() == 2){
 					QStringList l;
-					l << field2optimized(a[0].toString(),optimize) << field2optimized(a[1].toString(),optimize);
+                    l << a[0].toString().replace(".","_") << a[1].toString().replace(".","_");
 					biflowTests << l;
 				}
 			}
@@ -565,7 +554,7 @@ int main(int argc, char *argv[]){
 				QJsonArray a = v.toArray();
 				if(a.count() == 2){
 					QStringList l;
-					l << field2optimized(a[0].toString(),optimize) << field2optimized(a[1].toString(),optimize);
+                    l << a[0].toString().replace(".","_") << a[1].toString().replace(".","_");
 					biflowFlips << l;
 				}
 			}
@@ -575,22 +564,26 @@ int main(int argc, char *argv[]){
 			biflowFields << "packets";
 			foreach(QJsonValue v, tests){
 				if(v.isString()){
-					biflowFields << field2optimized(v.toString(),optimize);
+                    biflowFields << v.toString().replace(".","_");
 				}
 			}
 		}
 	}
 
-	if(QFile(pcap).exists()){
+    QStringList params;
+    params << "-o" << "tcp.desegment_tcp_streams:false" << "-M" << "100000" << "-l" << "-T" << "ek" << "-n" << tsharkFields;
+    if(QFile(pcap).exists()){
 		stats = true;
 		tshark.setProcessChannelMode(QProcess::ForwardedErrorChannel);
 		tshark.setReadChannel(QProcess::StandardOutput);
-		tshark.start("tshark",QStringList() << "-o" << "tcp.desegment_tcp_streams:false" << "-M" << "100000" << "-l" << "-T" << "ek" << "-n" << "-r" << pcap << tsharkFields);
+        params << "-r" << pcap;
+        tshark.start("tshark",params);
 	} else {
 		stats = false;
 		tshark.setProcessChannelMode(QProcess::SeparateChannels);
 		tshark.setReadChannel(QProcess::StandardOutput);
-		tshark.start("tshark",QStringList() << "-o" << "tcp.desegment_tcp_streams:false" << "-M" << "100000" << "-l" << "-T" << "ek" << "-n" << "-i" << pcap << tsharkFields);
+        params << "-i" << pcap;
+        tshark.start("tshark",params);
 	}
 	tshark.waitForStarted();
 	TsharkPacket packet;
