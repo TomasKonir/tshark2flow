@@ -148,7 +148,7 @@ void obj2packet(QJsonObject &packet, TsharkPacket &tp, bool clean = false){
 					case QJsonValue::String :{
 							QString s = v.toString();
 							bool numberOk;
-							qint64 n = s.toLongLong(&numberOk,0);
+							qint64 n = s.toLongLong(&numberOk,10);
 							if(numberOk){
 								tp.fields.insert(k,n);
 							} else {
