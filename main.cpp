@@ -352,7 +352,12 @@ void packetProcess(const TsharkPacket &packet, const QByteArray &ident, const qi
 						break;
 					}
 				case OP_OR:{
-						fields->insert(k,v);
+						bool numberOk;
+						qint64 n = v.toString().toLongLong(&numberOk,0);
+						if(numberOk){
+							fields->insert(k,n);
+						}
+						
 						break;
 					}
 				case OP_ARRAY:{
@@ -401,11 +406,14 @@ void packetProcess(const TsharkPacket &packet, const QByteArray &ident, const qi
 						break;
 					}
 				case OP_OR:{
-						qint64 d = v.toLongLong();
-						if(fields->contains(k)){
-							d |=  fields->value(k).toLongLong();
+						bool numberOk;
+						qint64 n = v.toString().toLongLong(&numberOk,0);
+						if(numberOk){
+							if(fields->contains(k)){
+								n |=  fields->value(k).toLongLong();
+							}
+							fields->insert(k,n);
 						}
-						fields->insert(k,d);
 						break;
 					}
 				case OP_ARRAY:{
